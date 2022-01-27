@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Twitch Subs List</title>
+</head>
+<body>
+  <div id="sublist">
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.4/axios.min.js" integrity="sha512-lTLt+W7MrmDfKam+r3D2LURu0F47a3QaW5nF0c6Hl0JDZ57ruei+ovbg7BrZ+0bjVJ5YgzsAWE+RreERbpPE1g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+  <script>
+    // PABLO CL 2021
+    // THIS SCRIPT NEEDS AN ACCESS TOKEN WITH READ:SUBS PERMISSIONS
+    // TO OBTAIN IT YOU MUST CREATE FIRST AN APP ON https://dev.twitch.tv/ TO OBTAIN YOUR APP CLIENT_ID
+    // THEN DO THE FOLLOWING REQUEST, USING YOUR APP CLIENT_ID
+    // https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=XXXXXXXX&redirect_uri=http://localhost&scope=channel:read:subscriptions
+    // FROM THE ANSWER, GET YOUR TOKEN FROM THE "access_token" VALUE
+    // THEN LOAD THIS WEBPAGE USING YOUR CLIENT_ID, TOKEN VALUE ON "auth" PARAMETER AND YOUR LOGIN USERNAME ON THE "login" PARAMETER
+    // https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY
+    // OPTIONAL QUERY STRING PARAMETERS: icons 0 or 1 TO SHOW SUB TYPE ICONS, style = default, twitch OR white TO ADD SOME STYLES TO THE LIST
+    // EX: https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY&icons=1&style=twitch
+    // TODO: FIX REQUEST RATE AND HANDLE PAGINATION
+    new Vue({
+    el: '#sublist',
+    template:`
+    <div>
+      <div v-if="!error">
+        <ul v-if="listLoaded" :class="style">
+          <li v-for="user in userlist.data" :key="user.user_name">
+          <span v-if="icons === '1'">
+            <span v-if="user.is_gift"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA29JREFUeNqUk81vG0UYxp9Zjz83duwYO6lNaAoVFfTCR0URFwQGIS49FHHqKRf+Ag60wAGJ5sK5vYCQ+BDigISEEJaoCEIcQECRinoARRWOY+w4rrE39q7nY3eHmV07zZWRXs3uzLu/93nemSXNZhPtdhuWZWHFXn0lbFWuhaH/PerD1x158M9kMoFSCtlsFnmrcjrRr15PhrlGYn285SQ6b29ubsIMazgcYjQaIXBJfe/LzKfiIJlR4+yF1if5TtgtvZBKpYgJ0itf7Hy+soND+4lcLtvtfJ1+i/XoQ5gPa/Ew3g2L47vTb9cvehulF4drZy9l+r1m7kYR9UqOV0vtb+jVRy5Zvy0/3z9ZeGb0IAtmbTYgzx2BjOwwDLG0HuzwxOTC758NPjoceKx4RtVeurLx16B5377zQ+Wg8Ub9i6VTwfnpkLGfPtz/eCpHDxQfVTcXIFooFFCr1WDbtjj37jq5+f6han0le4OKOz51pnh/eW2ZIKES7p7/2u4N/jIbpx/OlzL5Z9/Jk263u+CAfPfB7cteO7FlF9MoreWQo8vY/4Oj1xqh73ZhlylCFYKPCE7k6yjX86g9loYnHYz6HnyhkLKtDvnlPU8Nf07CXqWxxBRQWAFYCPza+hEykAiUj2K2jHMbT0JJYDIGAhErka4GlRRoLp+BVyRIFfWqijeFTvIEB/c5ZCgQhD645Ji52gIBEtk4oiZTgqRNQJnlQOUyoJnMkV+a1ImW0iCmFQn4GiTTXFeNQSQ4SoXQOdzsJc+3SbleVUtyDXReRd89pO4qiD91EheQQiIsCaw+HYN8P1av+fjXc/D4q6vEchwHUjGo+aYJYiZ9LUw1EyzQc8CP9swcpeo+GtWRi0jeVIcbb5gMqhsqJsBMstieL8F1z4Sje6KvsPRj5aFmSw/3QEo319cLJD44BEb+TPdIzsAiVUKDGExxa2HN5GlQwI6BQq0gSkrPKxFzvKG2w+bBI5j5SGlFwQLE4m/vgfx4MZgfnG+q6mo84JG1CKTDWMExkHkPFiBf6/RnXFHPJzRLjykyzdYgo0jPQorIigGFcxDzBFw2jUGu66K3s7eV/Ju8ma/G3pa0su7Ywa3btzDj00jVpDrDnRO7UY/E/B5NnCkOcOcp4CzI9vY2DEz/tKCU4v8MoX+BRqMRPf8nwABJCeybz2TYhAAAAABJRU5ErkJggg=="/></span>
+            <span v-else><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAIAAADZrBkAAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAv1JREFUeNpcU0lMFEEU/b+qppuZAYFuFgcXDBBBjftCVIKiHtwIGk9ED5h4Md706s2zRhNjjInbwRNqvGiCiUaD0RhNjGsiKsIwAzMMSwMD09PdVWV1Dxhjp5PfXfXff7/+e4XbjAtLqqol4wASABD+f+RCRBkCECrEB1Ksoso0qnTE0L9JlJHZqbyUsqS0iHMRVBMgNcAcALHnJKMKgEVAeAGGKFBSe5abtQxBG0vY4SgFqXaZVIQIKCUSIBRcAC+gKbyCoBwZmuo4vvHEmU2p4SmVA6hgHNADqWoRBKFqYNDDwhGAOC6PlpGtu+pKDK2iJmTPeVqYBkiVRueTCq0pZkUDgkpBM6Oz65orSgxdrTe3Ls2kMn6HQle7f4srGDImuOuk0mMjo4nU0FQ8nty+r66wvbu9ccKyhwfGM8l0KjU+5zk0pAg9VQbGMtmDnQ0t7Q0TmWnphoTnbW6p90cHZG1L7aWHHZAHpsnyWMnH3kT3jT7hFjMkgrHo6xepjq4tK9cs/0cvdWo1AbajbVVhYXaGX+t5RcAjoZzfZGl5kZXMd7Xd/vS2HwKWghRBmBfm89ufnTuv/P7mGKZSz/NhHneMGk1jxvlTT14/+07m6ZwAQ6TkLx9/Pn+yR5elsWW65+ggQyRwDeEeqYzp9hh/cPNDIIZSUgskRilE9/V39gyai8s85Rj0RSaBD1VDgis9dWfn3hWBPmy+U0VHQ3uOrufoSpFdEAB9tgLYyfNSI9J6qEF9x3+kz3beOn3k7tf3SfV7oHO1uUTPZenfedHGysORaBiJk05b+9s3tHY0dd95c/ls72i/NzMhnz/6lM3ONLc1UiF6n/YvKgsjyOlpmyFySRwpw5EokcS9eK7nyf0vseoqszICmJ/LFd272hfvs+obFpuxiPCdqcwOeKzpqlm9yKMao+HpbCKXJdUVpiTq1gSmU2fD4vHxYcpEubHUc10CbjJhscHBybxLkVjqvvgKAxmJWwvOxmBulgquWp8c9YeB9vAv648AAwBEqV0qLiBSQgAAAABJRU5ErkJggg=="/></span>
+          </span>
+          {{user.user_name}}</li>
+        </ul>
+        <p v-else><img height="30" width="30" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4iICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPgo8c3ZnIHdpZHRoPSI0MHB4IiBoZWlnaHQ9IjQwcHgiIHZpZXdCb3g9IjAgMCA0MCA0MCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWw6c3BhY2U9InByZXNlcnZlIiBzdHlsZT0iZmlsbC1ydWxlOmV2ZW5vZGQ7Y2xpcC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjEuNDE0MjE7IiB4PSIwcHgiIHk9IjBweCI+CiAgICA8ZGVmcz4KICAgICAgICA8c3R5bGUgdHlwZT0idGV4dC9jc3MiPjwhW0NEQVRBWwogICAgICAgICAgICBALXdlYmtpdC1rZXlmcmFtZXMgc3BpbiB7CiAgICAgICAgICAgICAgZnJvbSB7CiAgICAgICAgICAgICAgICAtd2Via2l0LXRyYW5zZm9ybTogcm90YXRlKDBkZWcpCiAgICAgICAgICAgICAgfQogICAgICAgICAgICAgIHRvIHsKICAgICAgICAgICAgICAgIC13ZWJraXQtdHJhbnNmb3JtOiByb3RhdGUoLTM1OWRlZykKICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgQGtleWZyYW1lcyBzcGluIHsKICAgICAgICAgICAgICBmcm9tIHsKICAgICAgICAgICAgICAgIHRyYW5zZm9ybTogcm90YXRlKDBkZWcpCiAgICAgICAgICAgICAgfQogICAgICAgICAgICAgIHRvIHsKICAgICAgICAgICAgICAgIHRyYW5zZm9ybTogcm90YXRlKC0zNTlkZWcpCiAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICAgIHN2ZyB7CiAgICAgICAgICAgICAgICAtd2Via2l0LXRyYW5zZm9ybS1vcmlnaW46IDUwJSA1MCU7CiAgICAgICAgICAgICAgICAtd2Via2l0LWFuaW1hdGlvbjogc3BpbiAxLjVzIGxpbmVhciBpbmZpbml0ZTsKICAgICAgICAgICAgICAgIC13ZWJraXQtYmFja2ZhY2UtdmlzaWJpbGl0eTogaGlkZGVuOwogICAgICAgICAgICAgICAgYW5pbWF0aW9uOiBzcGluIDEuNXMgbGluZWFyIGluZmluaXRlOwogICAgICAgICAgICB9CiAgICAgICAgXV0+PC9zdHlsZT4KICAgIDwvZGVmcz4KICAgIDxnIGlkPSJvdXRlciI+CiAgICAgICAgPGc+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0yMCwwQzIyLjIwNTgsMCAyMy45OTM5LDEuNzg4MTMgMjMuOTkzOSwzLjk5MzlDMjMuOTkzOSw2LjE5OTY4IDIyLjIwNTgsNy45ODc4MSAyMCw3Ljk4NzgxQzE3Ljc5NDIsNy45ODc4MSAxNi4wMDYxLDYuMTk5NjggMTYuMDA2MSwzLjk5MzlDMTYuMDA2MSwxLjc4ODEzIDE3Ljc5NDIsMCAyMCwwWiIgc3R5bGU9ImZpbGw6YmxhY2s7Ii8+CiAgICAgICAgPC9nPgogICAgICAgIDxnPgogICAgICAgICAgICA8cGF0aCBkPSJNNS44NTc4Niw1Ljg1Nzg2QzcuNDE3NTgsNC4yOTgxNSA5Ljk0NjM4LDQuMjk4MTUgMTEuNTA2MSw1Ljg1Nzg2QzEzLjA2NTgsNy40MTc1OCAxMy4wNjU4LDkuOTQ2MzggMTEuNTA2MSwxMS41MDYxQzkuOTQ2MzgsMTMuMDY1OCA3LjQxNzU4LDEzLjA2NTggNS44NTc4NiwxMS41MDYxQzQuMjk4MTUsOS45NDYzOCA0LjI5ODE1LDcuNDE3NTggNS44NTc4Niw1Ljg1Nzg2WiIgc3R5bGU9ImZpbGw6cmdiKDIxMCwyMTAsMjEwKTsiLz4KICAgICAgICA8L2c+CiAgICAgICAgPGc+CiAgICAgICAgICAgIDxwYXRoIGQ9Ik0yMCwzMi4wMTIyQzIyLjIwNTgsMzIuMDEyMiAyMy45OTM5LDMzLjgwMDMgMjMuOTkzOSwzNi4wMDYxQzIzLjk5MzksMzguMjExOSAyMi4yMDU4LDQwIDIwLDQwQzE3Ljc5NDIsNDAgMTYuMDA2MSwzOC4yMTE5IDE2LjAwNjEsMzYuMDA2MUMxNi4wMDYxLDMzLjgwMDMgMTcuNzk0MiwzMi4wMTIyIDIwLDMyLjAxMjJaIiBzdHlsZT0iZmlsbDpyZ2IoMTMwLDEzMCwxMzApOyIvPgogICAgICAgIDwvZz4KICAgICAgICA8Zz4KICAgICAgICAgICAgPHBhdGggZD0iTTI4LjQ5MzksMjguNDkzOUMzMC4wNTM2LDI2LjkzNDIgMzIuNTgyNCwyNi45MzQyIDM0LjE0MjEsMjguNDkzOUMzNS43MDE5LDMwLjA1MzYgMzUuNzAxOSwzMi41ODI0IDM0LjE0MjEsMzQuMTQyMUMzMi41ODI0LDM1LjcwMTkgMzAuMDUzNiwzNS43MDE5IDI4LjQ5MzksMzQuMTQyMUMyNi45MzQyLDMyLjU4MjQgMjYuOTM0MiwzMC4wNTM2IDI4LjQ5MzksMjguNDkzOVoiIHN0eWxlPSJmaWxsOnJnYigxMDEsMTAxLDEwMSk7Ii8+CiAgICAgICAgPC9nPgogICAgICAgIDxnPgogICAgICAgICAgICA8cGF0aCBkPSJNMy45OTM5LDE2LjAwNjFDNi4xOTk2OCwxNi4wMDYxIDcuOTg3ODEsMTcuNzk0MiA3Ljk4NzgxLDIwQzcuOTg3ODEsMjIuMjA1OCA2LjE5OTY4LDIzLjk5MzkgMy45OTM5LDIzLjk5MzlDMS43ODgxMywyMy45OTM5IDAsMjIuMjA1OCAwLDIwQzAsMTcuNzk0MiAxLjc4ODEzLDE2LjAwNjEgMy45OTM5LDE2LjAwNjFaIiBzdHlsZT0iZmlsbDpyZ2IoMTg3LDE4NywxODcpOyIvPgogICAgICAgIDwvZz4KICAgICAgICA8Zz4KICAgICAgICAgICAgPHBhdGggZD0iTTUuODU3ODYsMjguNDkzOUM3LjQxNzU4LDI2LjkzNDIgOS45NDYzOCwyNi45MzQyIDExLjUwNjEsMjguNDkzOUMxMy4wNjU4LDMwLjA1MzYgMTMuMDY1OCwzMi41ODI0IDExLjUwNjEsMzQuMTQyMUM5Ljk0NjM4LDM1LjcwMTkgNy40MTc1OCwzNS43MDE5IDUuODU3ODYsMzQuMTQyMUM0LjI5ODE1LDMyLjU4MjQgNC4yOTgxNSwzMC4wNTM2IDUuODU3ODYsMjguNDkzOVoiIHN0eWxlPSJmaWxsOnJnYigxNjQsMTY0LDE2NCk7Ii8+CiAgICAgICAgPC9nPgogICAgICAgIDxnPgogICAgICAgICAgICA8cGF0aCBkPSJNMzYuMDA2MSwxNi4wMDYxQzM4LjIxMTksMTYuMDA2MSA0MCwxNy43OTQyIDQwLDIwQzQwLDIyLjIwNTggMzguMjExOSwyMy45OTM5IDM2LjAwNjEsMjMuOTkzOUMzMy44MDAzLDIzLjk5MzkgMzIuMDEyMiwyMi4yMDU4IDMyLjAxMjIsMjBDMzIuMDEyMiwxNy43OTQyIDMzLjgwMDMsMTYuMDA2MSAzNi4wMDYxLDE2LjAwNjFaIiBzdHlsZT0iZmlsbDpyZ2IoNzQsNzQsNzQpOyIvPgogICAgICAgIDwvZz4KICAgICAgICA8Zz4KICAgICAgICAgICAgPHBhdGggZD0iTTI4LjQ5MzksNS44NTc4NkMzMC4wNTM2LDQuMjk4MTUgMzIuNTgyNCw0LjI5ODE1IDM0LjE0MjEsNS44NTc4NkMzNS43MDE5LDcuNDE3NTggMzUuNzAxOSw5Ljk0NjM4IDM0LjE0MjEsMTEuNTA2MUMzMi41ODI0LDEzLjA2NTggMzAuMDUzNiwxMy4wNjU4IDI4LjQ5MzksMTEuNTA2MUMyNi45MzQyLDkuOTQ2MzggMjYuOTM0Miw3LjQxNzU4IDI4LjQ5MzksNS44NTc4NloiIHN0eWxlPSJmaWxsOnJnYig1MCw1MCw1MCk7Ii8+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4K" /></p>
+      </div>
+      <div v-else class="error">{{error}}</div>
+    </div>
+    `,
+    data(){
+        return{
+            clientId: null,
+            token: null,
+            login:null,
+            broadId: null,
+            userlist: null,
+            paginationAmount: 100,
+            style: 'default',
+            icons: '0',
+            error: null,
+            totalSubs: 0,
+            pagination: null,
+            pages :1,
+            currentPage:1,
+        }
+    },
+    created()
+    {
+      //Get the query string parameters on created
+      let uri = window.location.search.substring(1)
+      let params = new URLSearchParams(uri)
+      this.clientId = params.get("client_id")
+      this.token = params.get("auth")
+      this.login = params.get("login")
+      if(params.get("style")){
+        this.style = params.get("style")
+      }
+      if(params.get("icons")){
+        this.icons = params.get("icons")
+      }
+      if(params.get("pagination")){
+        this.paginationAmount = parseInt(params.get("pagination"))
+      }
+    },
+    mounted(){
+      //If user provided the Bearer token and the login, it's time to get the broadcaster id
+      if(this.token&&this.login){
+        this.getUserId()
+      }else{
+        this.error='Auth or login missing'
+      }
+    },
+    computed:{
+      listLoaded() {
+        if(this.totalSubs >0 && this.userlist){
+          if(this.userlist.data.length >= this.totalSubs-1){
+            return true
+          }
+        }
+      }
+    },
+    methods:{
+      getUserId(){
+        axios.defaults.headers.common["Authorization"] = 'Bearer '+this.token
+        axios.defaults.headers.common["Client-ID"] = this.clientId
+        axios
+        .get('https://api.twitch.tv/helix/users?login='+this.login)
+        .then(response => {
+            var temp_data = response.data
+            this.broadId = temp_data.data[0].id
+            //Request to get the subs list
+            this.getSubsList()
+        }).catch((reason) => {
+          this.error=reason
+        })
+      },
+      getSubsList(){
+        axios.defaults.headers.common["Authorization"] = 'Bearer '+this.token
+        axios.defaults.headers.common["Client-ID"] = this.clientId
+        axios
+        .get('https://api.twitch.tv/helix/subscriptions?broadcaster_id='+this.broadId+'&first='+this.paginationAmount)
+        .then(response => {
+          this.totalSubs = response.data.total
+          this.pagination = response.data.pagination.cursor
+          if(!this.userlist){
+            this.userlist = response.data
+          }
+          this.pages = Math.floor(this.totalSubs/this.paginationAmount)
+          if(this.pages >1){
+              this.getPaginatedSubs()
+          }else{
+            this.orderSubsList()
+          }
+        }).catch((reason) => {
+          this.error=reason
+        })
+      },
+      orderSubsList(){
+            //last sub must be removed because it's the broadcast
+            if(this.userlist.data){this.userlist.data.pop()}
+            //order by sub or gifted
+            this.userlist.data.sort(function(a, b) {
+              return a.is_gift - b.is_gift
+            })
+      },
+      getPaginatedSubs(){
+        axios.defaults.headers.common["Authorization"] = 'Bearer '+this.token
+        axios.defaults.headers.common["Client-ID"] = this.clientId
+        axios
+        .get('https://api.twitch.tv/helix/subscriptions?broadcaster_id='+this.broadId+'&first='+this.paginationAmount+'&after='+this.pagination)
+        .then(response => {
+          this.pagination = response.data.pagination.cursor
+          for(var i = 0; i < response.data.data.length; i++){
+                this.userlist.data.push(response.data.data[i])
+          }
+          if(this.userlist.data.length >= this.totalSubs){
+            this.orderSubsList()
+          }else{
+            this.getPaginatedSubs()
+          }
+        }).catch((reason) => {
+          this.error=reason
+        })
+      }
+    }
+  }) 
+  </script>
+<style>
+  body{margin-top:0px;font-family: Arial, Helvetica, sans-serif;}
+  .error{color:red;padding:10px}
+  ul.default {
+    -moz-column-count: 3;
+    -moz-column-gap: 20px;
+    -webkit-column-count: 3;
+    -webkit-column-gap: 20px;
+    column-count: 3;
+    column-gap: 20px;
+  }
+  ul.default li{color:#000;text-shadow:1px 1px 0px rgba(255,255,255,0.3);list-style-type: none;font-family: Arial, Helvetica, sans-serif;font-weight:bold}
+  ul.twitch {
+      -moz-column-count: 3;
+      -moz-column-gap: 20px;
+      -webkit-column-count: 3;
+      -webkit-column-gap: 20px;
+      column-count: 3;
+      column-gap: 20px;
+    }
+  ul.twitch li{color:#fff;text-shadow:0px 0px 2px rgba(0,0,0,0.9);list-style-type: none;font-size:30px;font-family: Arial, Helvetica, sans-serif;font-weight: bold;margin-bottom:15px}
+  ul.white {
+      -moz-column-count: 3;
+      -moz-column-gap: 20px;
+      -webkit-column-count: 3;
+      -webkit-column-gap: 20px;
+      column-count: 3;
+      column-gap: 20px;
+      }
+  ul.white li{color:#fff;text-shadow:0px 0px 2px rgba(0,0,0,0.9);list-style-type: none;font-family: Arial, Helvetica, sans-serif;font-weight:bold}
+</style>
+</body>
+</html>
