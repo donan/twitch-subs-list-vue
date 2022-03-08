@@ -21,8 +21,9 @@ TODO: Fix request rate and handle pagination.
 *  **client_id** - Your APP Client_ID.
 *  **auth** - Your Twitch Access Token.
 *  **login** - Your twitch login username.
-*  **icons** - 0 or 1 to show/hide the icons of the type of sub.
+*  **icons** - false or true to show/hide the icons of the type of sub.
 *  **style** - Change the theme. Values: default, white, twitch.
+*  **pagination** - Number of subs requested per page.
 
 Example using all the parameters:  
 ` https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY&icons=1&style=twitch`
