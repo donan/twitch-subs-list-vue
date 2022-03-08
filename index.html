@@ -12,17 +12,19 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.4/axios.min.js" integrity="sha512-lTLt+W7MrmDfKam+r3D2LURu0F47a3QaW5nF0c6Hl0JDZ57ruei+ovbg7BrZ+0bjVJ5YgzsAWE+RreERbpPE1g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
   <script>
-    // PABLO CL 2021/2022
-    // THIS SCRIPT NEEDS AN ACCESS TOKEN WITH READ:SUBS PERMISSIONS
-    // TO OBTAIN IT YOU MUST CREATE FIRST AN APP ON https://dev.twitch.tv/ OR YOU CAN USE MY DEFAULT CLIENT_ID APP (I GET NO INFO FROM THE TOKEN GENERATION)
-    // THEN DO THE FOLLOWING REQUEST
-    // https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=XXXXXXXX&redirect_uri=http://localhost&scope=channel:read:subscriptions
-    // FROM THE ANSWER, GET YOUR TOKEN FROM THE "access_token" VALUE
-    // THEN LOAD THIS SCRIPT USING THE CLIENT_ID, TOKEN VALUE ON "auth" PARAMETER AND YOUR LOGIN USERNAME ON THE "login" PARAMETER
-    // https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY
-    // OPTIONAL QUERY STRING PARAMETERS: icons false or true TO SHOW SUB TYPE ICONS, style = default, twitch OR white TO ADD SOME STYLES TO THE LIST, pagination = number TO CHANGE THE NUMBER OF SUBS REQUESTED PER PAGE
-    // EX: https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY&icons=true&style=twitch
-    // TODO: REQUEST RATE HANDLING AND VISUAL PAGINATION
+    /*
+    PABLO CL 2021/2022
+    THIS SCRIPT NEEDS AN ACCESS TOKEN WITH READ:SUBS PERMISSIONS
+    TO OBTAIN IT YOU MUST CREATE FIRST AN APP ON https://dev.twitch.tv/ OR YOU CAN USE MY DEFAULT CLIENT_ID APP (I GET NO INFO FROM THE TOKEN GENERATION)
+    THEN DO THE FOLLOWING REQUEST
+    https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=XXXXXXXX&redirect_uri=http://localhost&scope=channel:read:subscriptions
+    FROM THE ANSWER, GET YOUR TOKEN FROM THE "access_token" VALUE
+    THEN LOAD THIS SCRIPT USING THE CLIENT_ID, TOKEN VALUE ON "auth" PARAMETER AND YOUR LOGIN USERNAME ON THE "login" PARAMETER
+    https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY
+    OPTIONAL QUERY STRING PARAMETERS: icons false or true TO SHOW SUB TYPE ICONS, style = default, twitch OR white TO ADD SOME STYLES TO THE LIST, pagination = number TO CHANGE THE NUMBER OF SUBS REQUESTED PER PAGE
+    EX: https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY&icons=true&style=twitch
+    TODO: REQUEST RATE HANDLING AND VISUAL PAGINATION
+    */
     new Vue({
     el: '#sublist',
     template:`
@@ -63,11 +65,13 @@
       //Get the query string parameters on created
       let uri = window.location.search.substring(1)
       let params = new URLSearchParams(uri)
+      //Required
+      this.auth = params.get("auth")
+      this.login = params.get("login")
+      //Optional
       if(params.get("client_id")){
         this.clientId = params.get("client_id")
       }
-      this.auth = params.get("auth")
-      this.login = params.get("login")
       if(params.get("style")){
         this.style = params.get("style")
       }
@@ -98,31 +102,35 @@
         .then(response => {
             var resp_data = response.data
             this.broadID = resp_data.data[0].id     
+            //Request Subs List to twitch
             this.getSubsList()
         }).catch((error) => {
           this.error=error
         })
       },
       async getSubsList(){
-        let hasNextPage = true;
-        let nextCursor = null;
+        let hasNextPage = true
+        let nextCursor = null
+        //Loop to get all the subs
         while (hasNextPage) {
-          let resp = await this.requestSubs(nextCursor);
+          let resp = await this.requestSubs(nextCursor)
           if (resp && resp.pagination.cursor) {
               if (resp.data) {
-                  this.userlist = [...this.userlist, ...resp.data];
-                  this.totalSubs = resp.data.total;
+                  this.userlist = [...this.userlist, ...resp.data]
+                  this.totalSubs = resp.data.total
               }
               if (resp.pagination.cursor) {
-                  nextCursor = resp.pagination.cursor;
+                  nextCursor = resp.pagination.cursor
                   this.pages++
               } else {
-                  hasNextPage = false;
-                  this.orderSubsList();
+                  //Fail-safe
+                  hasNextPage = false
+                  this.orderSubsList()
               }
           }else{
-            hasNextPage = false;
-            this.orderSubsList();
+            //Finish the loop and order the list
+            hasNextPage = false
+            this.orderSubsList()
           }
         }
       },
