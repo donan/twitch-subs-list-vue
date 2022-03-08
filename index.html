@@ -18,7 +18,7 @@
     TO OBTAIN IT YOU MUST CREATE FIRST AN APP ON https://dev.twitch.tv/ OR YOU CAN USE MY DEFAULT CLIENT_ID APP (I GET NO INFO FROM THE TOKEN GENERATION)
     THEN DO THE FOLLOWING REQUEST
     https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=XXXXXXXX&redirect_uri=http://localhost&scope=channel:read:subscriptions
-    FROM THE ANSWER, GET YOUR TOKEN FROM THE "access_token" VALUE
+    FROM THE RESPONSE, GET YOUR TOKEN FROM THE "access_token" VALUE
     THEN LOAD THIS SCRIPT USING THE CLIENT_ID, TOKEN VALUE ON "auth" PARAMETER AND YOUR LOGIN USERNAME ON THE "login" PARAMETER
     https://mywebsite.com/?client_id=ZZZZ&auth=XXXXXXXX&login=YYYYYYYY
     OPTIONAL QUERY STRING PARAMETERS: icons false or true TO SHOW SUB TYPE ICONS, style = default, twitch OR white TO ADD SOME STYLES TO THE LIST, pagination = number TO CHANGE THE NUMBER OF SUBS REQUESTED PER PAGE
